@@ -2,14 +2,17 @@ name: Lab04 Docker and Newman Verification
 
 on:
   push:
+    branches: [ main, master ]
   pull_request:
+    branches: [ main, master ]
 
 jobs:
   docker-newman:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -26,13 +29,28 @@ jobs:
       - name: Build Docker image
         run: docker build -t fit4110/iot-ingestion:lab04 .
 
+      - name: Create .env file for testing
+        run: |
+          if [ -f .env.example ]; then
+            cp .env.example .env
+          else
+            echo "No .env.example found, creating empty .env"
+            touch .env
+          fi
+
       - name: Run Docker container
         run: |
           docker run -d --rm \
             --name fit4110-iot-lab04 \
             -p 8000:8000 \
-            --env-file .env.example \
+            --env-file .env \
             fit4110/iot-ingestion:lab04
+
+      - name: Check container status
+        run: |
+          docker ps -a
+          sleep 2
+          docker logs fit4110-iot-lab04 || true
 
       - name: Wait for service health
         run: npx wait-on http://localhost:8000/health --timeout 30000
