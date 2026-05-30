@@ -1,3 +1,3 @@
 module.exports = {
-  extends: ['spectral:oas3']
+  extends: ["spectral:oas"]
 };
