@@ -2,11 +2,13 @@ import os
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional
+from http import HTTPStatus
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+
 
 
 SERVICE_NAME = os.getenv("SERVICE_NAME", "iot-ingestion")
@@ -112,13 +114,13 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     else:
         problem = build_problem(
             status_code=exc.status_code,
-            title=status.HTTP_STATUS_CODES.get(exc.status_code, "HTTP Error"),
+            title=HTTPStatus(exc.status_code).phrase,
             detail=str(exc.detail),
             instance=str(request.url.path),
         )
 
     problem.setdefault("status", exc.status_code)
-    problem.setdefault("title", status.HTTP_STATUS_CODES.get(exc.status_code, "HTTP Error"))
+    problem.setdefault("title", HTTPStatus(exc.status_code).phrase)
     problem.setdefault("type", "about:blank")
     problem.setdefault("detail", "Request failed")
     problem.setdefault("instance", str(request.url.path))
@@ -133,23 +135,24 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
-    request: Request, exc: RequestValidationError
-) -> JSONResponse:
-    first_error = exc.errors()[0] if exc.errors() else {}
-    location = ".".join(str(item) for item in first_error.get("loc", []))
-    message = first_error.get("msg", "Request validation error")
-    detail = f"{location}: {message}" if location else message
+    request: Request,
+    exc: RequestValidationError
+):
+    first_error = exc.errors()[0]
+
+    location = ".".join(str(x) for x in first_error.get("loc", []))
+    message = first_error.get("msg", "Validation error")
 
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=build_problem(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            title="Validation error",
-            detail=detail,
-            instance=str(request.url.path),
-            problem_type="https://smart-campus.local/problems/validation-error",
-        ),
-        media_type="application/problem+json",
+        status_code=422,
+        content={
+            "type": "https://smart-campus.local/problems/validation-error",
+            "title": "Validation error",
+            "status": 422,
+            "detail": f"{location}: {message}",
+            "instance": str(request.url.path)
+        },
+        media_type="application/problem+json"
     )
 
 
