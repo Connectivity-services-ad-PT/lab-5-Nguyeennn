@@ -1,92 +1,121 @@
-# RUN_LOCAL.md – Hướng dẫn chạy Lab 04
+# RUN_LOCAL.md – Analytics Service (Lab05)
 
-Tài liệu này giúp người khác clone repo sạch và chạy lại service trong Docker.
+## Prerequisites
+
+* Docker Desktop
+* Docker Compose v2
 
 ---
 
-## 1. Clone repo
+## 1. Clone repository
 
 ```bash
 git clone <repo-url>
-cd FIT4110_lab04_docker_packaging
+cd lab04-Nguyeennn
 ```
 
 ---
 
-## 2. Cài dependencies cho Newman/Prism/Spectral
+## 2. Create external network
 
 ```bash
-npm install
+docker network create class-net
+```
+
+If the network already exists, Docker will show a warning and continue.
+
+---
+
+## 3. Build services
+
+```bash
+docker compose build
 ```
 
 ---
 
-## 3. Build Docker image
+## 4. Start services
 
 ```bash
-docker build -t fit4110/iot-ingestion:lab04 .
+docker compose up -d
 ```
+
+Check status:
+
+```bash
+docker ps
+```
+
+Expected containers:
+
+* analytics_db
+* analytics_api
+
+Both containers should be healthy.
 
 ---
 
-## 4. Run container
+## 5. Test API
 
-```bash
-docker run --rm \
-  --name fit4110-iot-lab04 \
-  -p 8000:8000 \
-  --env-file .env.example \
-  fit4110/iot-ingestion:lab04
-```
-
-Mở terminal khác, kiểm tra:
+### Health Check
 
 ```bash
 curl http://localhost:8000/health
 ```
 
-Kết quả mong đợi:
+Expected response:
 
 ```json
 {
   "status": "ok",
-  "service": "iot-ingestion",
-  "version": "0.4.0"
+  "service": "analytics-api"
 }
 ```
 
----
-
-## 5. Chạy Newman test trên container
+### Analytics Summary
 
 ```bash
-npm run test:local
+curl http://localhost:8000/analytics/summary
 ```
 
-Report sinh tại:
+### Analytics By Device
 
-```text
-reports/newman-lab04-local.xml
-reports/newman-lab04-local.html
+```bash
+curl http://localhost:8000/analytics/by-device
 ```
 
 ---
 
-## 6. Dừng container
+## 6. Check PostgreSQL
 
-Nếu không dùng `--rm` hoặc container còn chạy:
+Connect to database:
 
 ```bash
-docker stop fit4110-iot-lab04
+docker exec -it analytics_db psql -U analytics_user -d analytics
+```
+
+View sample data:
+
+```sql
+SELECT * FROM sensor_readings;
+```
+
+Exit:
+
+```sql
+\q
 ```
 
 ---
 
-## 7. Lệnh nhanh
+## 7. Stop services
 
 ```bash
-make build
-make run
-make test-docker
-make stop
+docker compose down
+```
+
+Remove containers and volumes:
+
+```bash
+docker compose down -v
 ```
