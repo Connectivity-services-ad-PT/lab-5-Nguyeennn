@@ -1,0 +1,364 @@
+openapi: 3.0.3
+info:
+  title: FIT4110 B5 - Analytics Service API
+  version: 1.0.0
+  description: |
+    Analytics Service của nhóm B5 dùng để tổng hợp dữ liệu,
+    thống kê và tích hợp với các service khác.
+servers:
+  - url: http://analytics_api:8000
+    description: Docker Compose (class-net)
+  - url: http://localhost:8000
+    description: Local Development
+tags:
+  - name: Health
+  - name: Analytics
+  - name: Integrations
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  service:
+                    type: string
+                    example: "analytics-api"
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+  /analytics/summary:
+    get:
+      tags:
+        - Analytics
+      summary: Tổng hợp thống kê dữ liệu cảm biến
+      responses:
+        "200":
+          description: Analytics summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_records:
+                    type: integer
+                    example: 3
+                  avg_value:
+                    type: number
+                    format: float
+                    example: 41.8
+                  min_value:
+                    type: number
+                    format: float
+                    example: 28.5
+                  max_value:
+                    type: number
+                    format: float
+                    example: 65.2
+
+  /analytics/by-device:
+    get:
+      tags:
+        - Analytics
+      summary: Thống kê số lượng bản ghi theo thiết bị
+      responses:
+        "200":
+          description: Device statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        device_id:
+                          type: string
+                        total_readings:
+                          type: integer
+
+  /integrations:
+    get:
+      tags:
+        - Integrations
+      summary: Danh sách trạng thái kết nối các service tích hợp
+      responses:
+        "200":
+          description: Integration information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  iot_ingestion:
+                    type: string
+                    example: "connected"
+                  access_gate:
+                    type: string
+                    example: "connected"
+                  camera_stream:
+                    type: string
+                    example: "pending_b2_integration"
+                  core_business:
+                    type: string
+                    example: "pending_b6_integration"
+
+  /external/iot/health:
+    get:
+      tags:
+        - Integrations
+      summary: Kiểm tra trạng thái IoT Ingestion (B1)
+      responses:
+        "200":
+          description: IoT service healthy
+        "503":
+          description: IoT service unavailable
+
+# B1: IoT Ingestion - Triệu
+  /external/iot/mock-check:
+    post:
+      tags:
+        - Integrations
+      summary: Đẩy thử dữ liệu mô phỏng sang IoT Ingestion (B1)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IoTDataPayload'
+      responses:
+        "200":
+          description: IoT Ingestion nhận dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Data ingested successfully"
+        "400":
+          description: Dữ liệu gửi lên sai cấu trúc
+        "503":
+          description: Cannot connect to IoT service
+# B3: Access Gate - Bảo
+  /external/access/health:
+    get:
+      tags:
+        - Integrations
+      summary: Kiểm tra trạng thái Access Gate (B3)
+      responses:
+        "200":
+          description: Access Gate healthy
+        "503":
+          description: Access Gate unavailable
+
+
+  /external/access/check:
+    post:
+      tags:
+        - Integrations
+      summary: Gọi Access Gate để kiểm tra quyền truy cập
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessCheckRequest'
+      responses:
+        "200":
+          description: Access Gate trả về kết quả hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessCheckResponse'
+        "400":
+          description: Thiếu thông tin check-in (như mã thẻ hoặc ID cửa)
+        "503":
+          description: Cannot connect to Access Gate service
+  /external/access/logs:
+  get:
+    tags:
+      - Integrations
+    summary: Lấy log truy cập từ Access Gate (B3)
+    responses:
+      "200":
+        description: Access logs retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      employee_id:
+                        type: string
+                      gate_id:
+                        type: string
+                      action:
+                        type: string
+                        example: "ENTRY"
+                      timestamp:
+                        type: string
+                        format: date-time
+      "503":
+        description: Cannot connect to Access Gate service
+# B2: Camera Stream - Lân
+  /external/camera/info:
+    get:
+      tags:
+        - Integrations
+      summary: "[TẠM THỜI] Thông tin tích hợp Camera Stream (B2)"
+      description: >
+        Endpoint tạm thời giữ chỗ (Stub). Hiện tại đang CHỜ TÍCH HỢP do nhóm B2 chưa hoàn thiện. 
+        Khi nhóm B2 sẵn sàng, cấu trúc phản hồi sẽ được kết nối tới CameraCountData schema.
+      responses:
+        "202":
+          description: Kết nối đang chờ xử lý (Pending B2 Integration)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "pending_b2_integration"
+                  message:
+                    type: string
+                    example: "Chờ nhóm B2 hoàn thiện module và cung cấp API kết nối luồng dữ liệu"
+# B6: Core Business - Dự
+  /external/core/info:
+    get:
+      tags:
+        - Integrations
+      summary: "[TẠM THỜI] Thông tin tích hợp Core Business (B6)"
+      description: >
+        Endpoint tạm thời giữ chỗ (Stub). Hiện tại đang CHỜ TÍCH HỢP do nhóm B6 chưa hoàn thiện. 
+        Khi nhóm B6 sẵn sàng, API sẽ chính thức đẩy dữ liệu theo cấu trúc CoreReportPayload schema.
+      responses:
+        "202":
+          description: Kết nối đang chờ xử lý (Pending B6 Integration)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "pending_b6_integration"
+                  message:
+                    type: string
+                    example: "Chờ nhóm B6 hoàn thiện module và cấu trúc nhận báo cáo tổng hợp"
+
+components:
+  schemas:
+    # 1. Định nghĩa dữ liệu cho IoT (B1)
+    IoTDataPayload:
+      type: object
+      required:
+        - device_id
+        - temperature
+        - humidity
+      properties:
+        device_id:
+          type: string
+          example: "SENSOR-DHT22-01"
+        temperature:
+          type: number
+          format: float
+          example: 28.5
+        humidity:
+          type: number
+          format: float
+          example: 60.0
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-06-09T13:45:00Z"
+
+    # 2. Định nghĩa dữ liệu yêu cầu kiểm tra cửa (B3)
+    AccessCheckRequest:
+      type: object
+      required:
+        - card_uid
+        - gate_id
+      properties:
+        card_uid:
+          type: string
+          example: "A3B2C1D0"
+        gate_id:
+          type: string
+          example: "GATE-MAIN-01"
+
+    # 3. Định nghĩa dữ liệu trả về từ cửa (B3)
+    AccessCheckResponse:
+      type: object
+      properties:
+        is_allowed:
+          type: boolean
+          example: true
+        employee_name:
+          type: string
+          example: "Nguyen Van A"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-06-09T13:46:12Z"
+
+    # 4. Định nghĩa dữ liệu nhận từ Camera (B2) - Dùng khi B2 hoàn thiện
+    CameraCountData:
+      type: object
+      properties:
+        camera_id:
+          type: string
+          example: "CAM-ZONE-A"
+        crowd_count:
+          type: integer
+          example: 15
+        last_updated:
+          type: string
+          format: date-time
+          example: "2026-06-09T13:40:00Z"
+
+    # 5. Định nghĩa dữ liệu đẩy sang Core Business (B6) - Dùng khi B6 hoàn thiện
+    CoreReportPayload:
+      type: object
+      required:
+        - group_id
+        - system_health_score
+        - anomaly_detected
+      properties:
+        group_id:
+          type: string
+          example: "B5"
+        system_health_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 95
+        anomaly_detected:
+          type: boolean
+          example: false
+        details:
+          type: string
+          example: "Hệ thống hoạt động ổn định, không phát hiện quá nhiệt ở các thiết bị IoT."
