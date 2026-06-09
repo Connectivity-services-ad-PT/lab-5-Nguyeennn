@@ -194,35 +194,35 @@ paths:
         "503":
           description: Cannot connect to Access Gate service
   /external/access/logs:
-  get:
-    tags:
-      - Integrations
-    summary: Lấy log truy cập từ Access Gate (B3)
-    responses:
-      "200":
-        description: Access logs retrieved successfully
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                items:
-                  type: array
+    get:
+      tags:
+        - Integrations
+      summary: Lấy log truy cập từ Access Gate (B3)
+      responses:
+        "200":
+          description: Access logs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
                   items:
-                    type: object
-                    properties:
-                      employee_id:
-                        type: string
-                      gate_id:
-                        type: string
-                      action:
-                        type: string
-                        example: "ENTRY"
-                      timestamp:
-                        type: string
-                        format: date-time
-      "503":
-        description: Cannot connect to Access Gate service
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        employee_id:
+                          type: string
+                        gate_id:
+                          type: string
+                        action:
+                          type: string
+                          example: "ENTRY"
+                        timestamp:
+                          type: string
+                          format: date-time
+        "503":
+          description: Cannot connect to Access Gate service
 # B2: Camera Stream - Lân
   /external/camera/info:
     get:
