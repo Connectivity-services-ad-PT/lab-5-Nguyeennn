@@ -4,12 +4,12 @@ info:
   version: 1.0.0
   description: |
     Analytics Service của nhóm B5 dùng để tổng hợp dữ liệu,
-    thống kê và tích hợp với các service khác.
+    thống kê và tích hợp với các service khác trong hệ sinh thái Smart Campus.
 servers:
   - url: http://analytics_api:8000
-    description: Docker Compose (class-net)
-  - url: http://localhost:8000
-    description: Local Development
+    description: Mạng nội bộ container (class-net / team-internal)
+  - url: http://localhost:8005
+    description: Cổng ánh xạ ngoài thực tế của Team Analytics (Lab 05)
 tags:
   - name: Health
   - name: Analytics
@@ -20,14 +20,18 @@ paths:
     get:
       tags:
         - Health
-      summary: Health check
+      summary: Health check dịch vụ tích hợp kiểm tra sâu Database
       responses:
         "200":
-          description: Service is healthy
+          description: Dịch vụ đang hoạt động bình thường
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - status
+                  - service
+                  - version
                 properties:
                   status:
                     type: string
@@ -37,7 +41,7 @@ paths:
                     example: "analytics-api"
                   version:
                     type: string
-                    example: "1.0.0"
+                    example: "v0.1.0-team-analytics"
 
   /analytics/summary:
     get:
@@ -46,11 +50,16 @@ paths:
       summary: Tổng hợp thống kê dữ liệu cảm biến
       responses:
         "200":
-          description: Analytics summary
+          description: Kết quả tổng hợp dữ liệu (Trả về 0 nếu DB trống)
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - total_records
+                  - avg_value
+                  - min_value
+                  - max_value
                 properties:
                   total_records:
                     type: integer
@@ -67,73 +76,90 @@ paths:
                     type: number
                     format: float
                     example: 65.2
+        "500":
+          description: Lỗi kết nối cơ sở dữ liệu nội bộ
 
   /analytics/by-device:
     get:
       tags:
         - Analytics
-      summary: Thống kê số lượng bản ghi theo thiết bị
+      summary: Thống kê số lượng bản ghi phân loại theo thiết bị
       responses:
         "200":
-          description: Device statistics
+          description: Danh sách thống kê thiết bị thành công
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - items
                 properties:
                   items:
                     type: array
                     items:
                       type: object
+                      required:
+                        - device_id
+                        - total_readings
                       properties:
                         device_id:
                           type: string
+                          example: "SENSOR-DHT22-01"
                         total_readings:
                           type: integer
+                          example: 12
+        "500":
+          description: Lỗi truy vấn cơ sở dữ liệu
 
   /integrations:
     get:
       tags:
         - Integrations
-      summary: Danh sách trạng thái kết nối các service tích hợp
+      summary: Danh sách đường dẫn (URL) thực tế của các dịch vụ tích hợp
       responses:
         "200":
-          description: Integration information
+          description: Đồng bộ hóa chính xác với định dạng trả về của main.py
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - iot_ingestion
+                  - access_gate
+                  - camera_stream
+                  - core_business
                 properties:
                   iot_ingestion:
                     type: string
-                    example: "connected"
+                    example: "http://iot-ingestion-b1:8000"
                   access_gate:
                     type: string
-                    example: "connected"
+                    example: "http://team-gate-api:8000"
                   camera_stream:
                     type: string
-                    example: "pending_b2_integration"
+                    example: "http://camera-stream:8000"
                   core_business:
                     type: string
-                    example: "pending_b6_integration"
+                    example: "http://core-business:8000"
 
   /external/iot/health:
     get:
       tags:
         - Integrations
-      summary: Kiểm tra trạng thái IoT Ingestion (B1)
+      summary: Kiểm tra trạng thái hoạt động của IoT Ingestion (B1)
       responses:
         "200":
-          description: IoT service healthy
+          description: IoT service trực tuyến và phản hồi tốt
         "503":
-          description: IoT service unavailable
+          description: Dịch vụ đối tác không phản hồi hoặc mất kết nối
 
-# B1: IoT Ingestion - Triệu
   /external/iot/mock-check:
     post:
       tags:
         - Integrations
-      summary: Đẩy thử dữ liệu mô phỏng sang IoT Ingestion (B1)
+      summary: Đẩy dữ liệu mô phỏng sang IoT Ingestion qua kênh bảo mật
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -147,6 +173,9 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - success
+                  - message
                 properties:
                   success:
                     type: boolean
@@ -154,11 +183,11 @@ paths:
                   message:
                     type: string
                     example: "Data ingested successfully"
-        "400":
-          description: Dữ liệu gửi lên sai cấu trúc
+        "401":
+          description: Lỗi xác thực mã Token bảo mật
         "503":
-          description: Cannot connect to IoT service
-# B3: Access Gate - Bảo
+          description: Không thể kết nối tới dịch vụ mạng đích
+
   /external/access/health:
     get:
       tags:
@@ -166,16 +195,17 @@ paths:
       summary: Kiểm tra trạng thái Access Gate (B3)
       responses:
         "200":
-          description: Access Gate healthy
+          description: Phân hệ Access Gate hoạt động bình thường
         "503":
-          description: Access Gate unavailable
-
+          description: Không kết nối được tới Access Gate
 
   /external/access/check:
     post:
       tags:
         - Integrations
-      summary: Gọi Access Gate để kiểm tra quyền truy cập
+      summary: Yêu cầu Access Gate xác thực phân quyền cửa
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -184,95 +214,122 @@ paths:
               $ref: '#/components/schemas/AccessCheckRequest'
       responses:
         "200":
-          description: Access Gate trả về kết quả hợp lệ
+          description: Phản hồi hợp lệ từ máy chủ Access Gate
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AccessCheckResponse'
-        "400":
-          description: Thiếu thông tin check-in (như mã thẻ hoặc ID cửa)
+        "401":
+          description: Mã authToken gửi kèm không hợp lệ
         "503":
-          description: Cannot connect to Access Gate service
+          description: Lỗi liên kết dịch vụ Access Gate
+
   /external/access/logs:
     get:
       tags:
         - Integrations
-      summary: Lấy log truy cập từ Access Gate (B3)
+      summary: Trích xuất lịch sử log ra vào từ Access Gate (B3)
+      security:
+        - BearerAuth: []
       responses:
         "200":
-          description: Access logs retrieved successfully
+          description: Danh sách logs được lấy thành công
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - items
                 properties:
                   items:
                     type: array
                     items:
                       type: object
+                      required:
+                        - employee_id
+                        - gate_id
+                        - action
+                        - timestamp
                       properties:
                         employee_id:
                           type: string
+                          example: "EMP-1024"
                         gate_id:
                           type: string
+                          example: "GATE-MAIN-01"
                         action:
                           type: string
                           example: "ENTRY"
                         timestamp:
                           type: string
                           format: date-time
+                          example: "2026-06-09T13:46:12Z"
         "503":
-          description: Cannot connect to Access Gate service
-# B2: Camera Stream - Lân
+          description: Lỗi kết nối dịch vụ đối tác
+
   /external/camera/info:
     get:
       tags:
         - Integrations
-      summary: "[TẠM THỜI] Thông tin tích hợp Camera Stream (B2)"
-      description: >
-        Endpoint tạm thời giữ chỗ (Stub). Hiện tại đang CHỜ TÍCH HỢP do nhóm B2 chưa hoàn thiện. 
-        Khi nhóm B2 sẵn sàng, cấu trúc phản hồi sẽ được kết nối tới CameraCountData schema.
+      summary: "[STUB] Thông tin giữ chỗ liên kết Camera Stream (B2)"
       responses:
         "202":
-          description: Kết nối đang chờ xử lý (Pending B2 Integration)
+          description: Luồng dữ liệu đang ở trạng thái chờ tích hợp mạng
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - status
+                  - message
+                  - service_url
                 properties:
                   status:
                     type: string
-                    example: "pending_b2_integration"
+                    example: "pending"
                   message:
                     type: string
-                    example: "Chờ nhóm B2 hoàn thiện module và cung cấp API kết nối luồng dữ liệu"
-# B6: Core Business - Dự
+                    example: "Waiting for Camera Stream contract"
+                  service_url:
+                    type: string
+                    example: "http://camera-stream:8000"
+
   /external/core/info:
     get:
       tags:
         - Integrations
-      summary: "[TẠM THỜI] Thông tin tích hợp Core Business (B6)"
-      description: >
-        Endpoint tạm thời giữ chỗ (Stub). Hiện tại đang CHỜ TÍCH HỢP do nhóm B6 chưa hoàn thiện. 
-        Khi nhóm B6 sẵn sàng, API sẽ chính thức đẩy dữ liệu theo cấu trúc CoreReportPayload schema.
+      summary: "[STUB] Thông tin giữ chỗ liên kết Core Business (B6)"
       responses:
         "202":
-          description: Kết nối đang chờ xử lý (Pending B6 Integration)
+          description: Kênh kết nối báo cáo đang ở trạng thái chờ tích hợp mạng
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - status
+                  - message
+                  - service_url
                 properties:
                   status:
                     type: string
-                    example: "pending_b6_integration"
+                    example: "pending"
                   message:
                     type: string
-                    example: "Chờ nhóm B6 hoàn thiện module và cấu trúc nhận báo cáo tổng hợp"
+                    example: "Waiting for Core Business contract"
+                  service_url:
+                    type: string
+                    example: "http://core-business:8000"
 
 components:
+  # Thêm cơ chế bảo mật Bearer Token để triệt tiêu lỗi kiểm thử và làm đẹp Swagger UI
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Nhập mã mã token xác thực (Mặc định: local-dev-token)
+
   schemas:
-    # 1. Định nghĩa dữ liệu cho IoT (B1)
     IoTDataPayload:
       type: object
       required:
@@ -296,7 +353,6 @@ components:
           format: date-time
           example: "2026-06-09T13:45:00Z"
 
-    # 2. Định nghĩa dữ liệu yêu cầu kiểm tra cửa (B3)
     AccessCheckRequest:
       type: object
       required:
@@ -310,9 +366,12 @@ components:
           type: string
           example: "GATE-MAIN-01"
 
-    # 3. Định nghĩa dữ liệu trả về từ cửa (B3)
     AccessCheckResponse:
       type: object
+      required:
+        - is_allowed
+        - employee_name
+        - timestamp
       properties:
         is_allowed:
           type: boolean
@@ -324,41 +383,3 @@ components:
           type: string
           format: date-time
           example: "2026-06-09T13:46:12Z"
-
-    # 4. Định nghĩa dữ liệu nhận từ Camera (B2) - Dùng khi B2 hoàn thiện
-    CameraCountData:
-      type: object
-      properties:
-        camera_id:
-          type: string
-          example: "CAM-ZONE-A"
-        crowd_count:
-          type: integer
-          example: 15
-        last_updated:
-          type: string
-          format: date-time
-          example: "2026-06-09T13:40:00Z"
-
-    # 5. Định nghĩa dữ liệu đẩy sang Core Business (B6) - Dùng khi B6 hoàn thiện
-    CoreReportPayload:
-      type: object
-      required:
-        - group_id
-        - system_health_score
-        - anomaly_detected
-      properties:
-        group_id:
-          type: string
-          example: "B5"
-        system_health_score:
-          type: integer
-          minimum: 0
-          maximum: 100
-          example: 95
-        anomaly_detected:
-          type: boolean
-          example: false
-        details:
-          type: string
-          example: "Hệ thống hoạt động ổn định, không phát hiện quá nhiệt ở các thiết bị IoT."
