@@ -2,10 +2,10 @@ openapi: 3.0.3
 info:
   title: FIT4110 B5 - Analytics Service API
   version: 1.0.0
-contact: # BỔ SUNG ĐOẠN NÀY
-    name: Team B5 Support
-    email: support@smartcampus.fit
-    description: Analytics Service của nhóm B5 dùng để tổng hợp dữ liệu..
+contact: 
+    name: Team B5 - Analytics
+    email: nguyennguyen10122005@gmail.com
+    description: Analytics Service của nhóm B5 dùng để phân tích và  tổng hợp dữ liệu.
 servers:
   - url: http://analytics_api:8000
     description: Mạng nội bộ container (class-net / team-internal)
@@ -51,8 +51,8 @@ paths:
       tags:
         - Analytics
       summary: Tổng hợp thống kê dữ liệu cảm biến
-      operationId: getAnalyticsSummary # BỔ SUNG ĐOẠN NÀY
-      description: Trả về các chỉ số thống kê tổng hợp từ dữ liệu cảm biến. # BỔ SUNG ĐOẠN NÀY
+      operationId: getAnalyticsSummary 
+      description: Trả về các chỉ số thống kê tổng hợp từ dữ liệu cảm biến.
       responses:
         "200":
           description: Kết quả tổng hợp dữ liệu (Trả về 0 nếu DB trống)
@@ -327,7 +327,6 @@ paths:
                     example: "http://core-business:8000"
 
 components:
-  # Thêm cơ chế bảo mật Bearer Token để triệt tiêu lỗi kiểm thử và làm đẹp Swagger UI
   securitySchemes:
     BearerAuth:
       type: http
