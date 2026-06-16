@@ -329,7 +329,7 @@ components:
     BearerAuth:
       type: http
       scheme: bearer
-      description: Nhập mã mã token xác thực (Mặc định: local-dev-token)
+      description: "Nhập mã mã token xác thực (Mặc định: local-dev-token)"
 
   schemas:
     IoTDataPayload:
