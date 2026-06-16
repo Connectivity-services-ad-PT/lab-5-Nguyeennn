@@ -321,13 +321,13 @@ paths:
                     type: string
                     example: "http://core-business:8000"
 
-  components:
-    # Thêm cơ chế bảo mật Bearer Token để triệt tiêu lỗi kiểm thử và làm đẹp Swagger UI
-    securitySchemes:
-      BearerAuth:
-        type: http
-        scheme: bearer
-        description: Nhập mã mã token xác thực (Mặc định: local-dev-token)
+components:
+  # Thêm cơ chế bảo mật Bearer Token để triệt tiêu lỗi kiểm thử và làm đẹp Swagger UI
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Nhập mã mã token xác thực (Mặc định: local-dev-token)
 
   schemas:
     IoTDataPayload:
