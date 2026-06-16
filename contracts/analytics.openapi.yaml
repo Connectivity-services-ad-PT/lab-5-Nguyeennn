@@ -2,10 +2,10 @@ openapi: 3.0.3
 info:
   title: FIT4110 B5 - Analytics Service API
   version: 1.0.0
-contact: 
+  description: Analytics Service của nhóm B5 dùng để phân tích và tổng hợp dữ liệu.
+  contact:
     name: Team B5 - Analytics
     email: nguyennguyen10122005@gmail.com
-    description: Analytics Service của nhóm B5 dùng để phân tích và  tổng hợp dữ liệu.
 servers:
   - url: http://analytics_api:8000
     description: Mạng nội bộ container (class-net / team-internal)
@@ -22,8 +22,8 @@ paths:
       tags:
         - Health
       summary: Health check dịch vụ tích hợp kiểm tra sâu Database
-      operationId: getHealthCheck 
-      description: Kiểm tra tình trạng hoạt động của service và kết nối database. 
+      operationId: getHealthCheck
+      description: Kiểm tra tình trạng hoạt động của service và kết nối database.
       responses:
         "200":
           description: Dịch vụ đang hoạt động bình thường
@@ -51,11 +51,11 @@ paths:
       tags:
         - Analytics
       summary: Tổng hợp thống kê dữ liệu cảm biến
-      operationId: getAnalyticsSummary 
+      operationId: getAnalyticsSummary
       description: Trả về các chỉ số thống kê tổng hợp từ dữ liệu cảm biến.
       responses:
         "200":
-          description: Kết quả tổng hợp dữ liệu (Trả về 0 nếu DB trống)
+          description: Kết quả tổng hợp dữ liệu
           content:
             application/json:
               schema:
@@ -63,8 +63,6 @@ paths:
                 required:
                   - total_records
                   - avg_value
-                  - min_value
-                  - max_value
                 properties:
                   total_records:
                     type: integer
